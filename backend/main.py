@@ -1,6 +1,6 @@
 import os
 import json
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from integrations.airtable import (
@@ -19,7 +19,11 @@ from integrations.hubspot import (
     authorize_hubspot,
     get_hubspot_credentials,
     get_items_hubspot,
-    oauth2callback_hubspot
+    oauth2callback_hubspot,
+    get_contact,
+    create_contact,
+    update_contact,
+    delete_contact
 )
 
 app = FastAPI()
@@ -129,3 +133,61 @@ async def load_hubspot_data_integration(credentials: str = Form(...)):
     Then calls get_items_hubspot, which auto-refreshes if needed.
     """
     return await get_items_hubspot(credentials)
+
+@app.post("/integrations/hubspot/contact/get")
+async def hubspot_get_contact(
+    user_id: str = Form(...),
+    org_id: str = Form(...),
+    contact_id: str = Form(...)
+):
+    """
+    Retrieve a single HubSpot contact by ID.
+    """
+    return await get_contact(org_id, user_id, contact_id)
+
+@app.post("/integrations/hubspot/contact/create")
+async def hubspot_create_contact(
+    user_id: str = Form(...),
+    org_id: str = Form(...),
+    properties_str: str = Form(...),
+):
+    """
+    Create a new contact with the given properties.
+    `properties_str` is JSON, e.g.:
+       {"email": "jonedoe@hubspot.com", "firstname": "Jone"}
+    """
+    try:
+        props = json.loads(properties_str)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid JSON in 'properties_str'.")
+
+    return await create_contact(org_id, user_id, props)
+
+@app.post("/integrations/hubspot/contact/update")
+async def hubspot_update_contact(
+    user_id: str = Form(...),
+    org_id: str = Form(...),
+    contact_id: str = Form(...),
+    properties_str: str = Form(...),
+):
+    """
+    Update an existing contact identified by `contact_id`.
+    `properties_str` is JSON with the updated fields.
+    """
+    try:
+        props = json.loads(properties_str)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid JSON in 'properties_str'.")
+
+    return await update_contact(org_id, user_id, contact_id, props)
+
+@app.post("/integrations/hubspot/contact/delete")
+async def hubspot_delete_contact(
+    user_id: str = Form(...),
+    org_id: str = Form(...),
+    contact_id: str = Form(...)
+):
+    """
+    Delete the HubSpot contact with the given contact_id.
+    """
+    return await delete_contact(org_id, user_id, contact_id)

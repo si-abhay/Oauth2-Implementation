@@ -5,7 +5,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import HTMLResponse
 import httpx
 import time
-from typing import Union
+from typing import Optional, Union
 
 from integrations.integration_item import IntegrationItem
 from redis_client import add_key_value_redis, get_value_redis, delete_key_redis
@@ -21,6 +21,8 @@ REDIRECT_URI = os.getenv(
 AUTHORIZATION_URL = "https://app.hubspot.com/oauth/authorize"
 TOKEN_URL = "https://api.hubapi.com/oauth/v1/token"
 SCOPES = "crm.objects.contacts.read crm.objects.contacts.write oauth"
+
+BASE_URL = "https://api.hubapi.com/crm/v3/objects/contacts"
 
 async def authorize_hubspot(user_id: str, org_id: str) -> str:
     """
@@ -255,7 +257,7 @@ async def get_items_hubspot(credentials_or_str: Union[dict, str]) -> list:
     headers = {"Authorization": f"Bearer {access_token}"}
     async with httpx.AsyncClient() as client:
         response = await client.get(
-            "https://api.hubapi.com/crm/v3/objects/contacts",
+            BASE_URL,
             headers=headers
         )
 
@@ -276,3 +278,105 @@ async def get_items_hubspot(credentials_or_str: Union[dict, str]) -> list:
         )
 
     return integration_items
+
+
+async def get_contact(org_id: str, user_id: str, contact_id: str) -> dict:
+    """
+    Retrieve a single contact by ID.
+    """
+    access_token = await get_valid_hubspot_access_token(org_id, user_id)
+    url = f"{BASE_URL}/{contact_id}"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Failed to retrieve HubSpot contact {contact_id}. {response.text}"
+        )
+
+
+async def create_contact(org_id: str, user_id: str, properties: dict):
+    """
+    Create a new contact. `properties` is a dict like:
+      {
+        "email": "jonedoe@hubspot.com",
+        "firstname": "Jone",
+        "lastname": "Doe (Sample Contact)"
+      }
+    """
+    access_token = await get_valid_hubspot_access_token(org_id, user_id)
+    url = BASE_URL
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    payload = {"properties": properties}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, headers=headers, json=payload)
+
+    if response.status_code == 201:
+        return response.json()
+    else:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Failed to create HubSpot contact. {response.text}"
+        )
+
+
+async def update_contact(org_id: str, user_id: str, contact_id: str, properties: dict):
+    """
+    Update an existing contact. `properties` is a dict like:
+      {
+        "email": "newemail@hubspot.com",
+        "firstname": "NewName"
+      }
+    """
+    access_token = await get_valid_hubspot_access_token(org_id, user_id)
+    url = f"{BASE_URL}/{contact_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    payload = {"properties": properties}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.patch(url, headers=headers, json=payload)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Failed to update HubSpot contact {contact_id}. {response.text}"
+        )
+
+
+async def delete_contact(org_id: str, user_id: str, contact_id: str):
+    """
+    Delete a contact by ID.
+    """
+    access_token = await get_valid_hubspot_access_token(org_id, user_id)
+    url = f"{BASE_URL}/{contact_id}"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(url, headers=headers)
+
+    if response.status_code == 204:
+        return {"message": f"Contact {contact_id} successfully deleted."}
+    elif response.status_code == 404:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Contact {contact_id} does not exist or is already deleted."
+        )
+    else:
+        raise HTTPException(
+            status_code=response.status_code,
+            detail=f"Failed to delete HubSpot contact {contact_id}. {response.text}"
+        )

@@ -5,6 +5,7 @@ import { AirtableIntegration } from "./integrations/airtable";
 import { NotionIntegration } from "./integrations/notion";
 import { HubspotIntegration } from "./integrations/hubspot";
 import { DataForm } from "./data-form";
+import { HubspotContactsForm } from './contact-form';
 
 const integrationMapping = {
     Notion: NotionIntegration,
@@ -73,6 +74,16 @@ export const IntegrationForm = () => {
                         credentials={integrationParams?.credentials}
                     />
                 </Box>
+            )}
+
+            {/* If we have credentials and the integration is Hubspot, render the HubspotContactsForm */}
+            {integrationParams?.type === "Hubspot" && integrationParams?.credentials && (
+            <Box sx={{ mt: 2 }}>
+                <HubspotContactsForm
+                user={integrationParams.credentials.user_id || user}
+                org={integrationParams.credentials.org_id || org}
+                />
+            </Box>
             )}
         </Box>
     );

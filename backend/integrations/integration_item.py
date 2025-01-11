@@ -10,6 +10,8 @@ class IntegrationItem:
         parent_path_or_name: Optional[str] = None,
         parent_id: Optional[str] = None,
         name: Optional[str] = None,
+        email: Optional[str] = None,
+        last_name: Optional[str] = None,
         creation_time: Optional[datetime] = None,
         last_modified_time: Optional[datetime] = None,
         url: Optional[str] = None,
@@ -25,6 +27,8 @@ class IntegrationItem:
         self.parent_path_or_name = parent_path_or_name
         self.parent_id = parent_id
         self.name = name
+        self.email = email
+        self.last_name = last_name
         self.creation_time = creation_time
         self.last_modified_time = last_modified_time
         self.url = url

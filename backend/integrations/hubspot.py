@@ -105,9 +105,11 @@ async def get_hubspot_credentials(user_id: str, org_id: str) -> dict:
     key = f"hubspot_credentials:{org_id}:{user_id}"
     stored = await get_value_redis(key)
     if not stored:
+        # Here user needs to login again, as we don't have any stored tokens
+        # Because with time, tokens are cleared from Redis
         raise HTTPException(
             status_code=400,
-            detail=f"No HubSpot credentials found for org={org_id}, user={user_id}."
+            detail=f"No HubSpot credentials found for org={org_id}, user={user_id}.\nPlease refresh and Login again."
         )
     return json.loads(stored)
 
@@ -219,10 +221,10 @@ async def create_integration_item_metadata_object(
     """
     return IntegrationItem(
         id=response_json.get("id", "0000000"), # Default value if ID is missing!! :)
-        # For contacts, let's default to "email" if "firstname" is missing
         # Somethng is better than nothing, right? :)
-        name=response_json.get("properties", {}).get("firstname") 
-             or response_json.get("properties", {}).get("email", ""),
+        name=response_json.get("properties", {}).get("firstname"), 
+        email=response_json.get("properties", {}).get("email", ""),
+        last_name=response_json.get("properties", {}).get("lastname", ""),
         type=item_type,
         parent_id=parent_id,
         parent_path_or_name=parent_name,
@@ -375,6 +377,10 @@ async def delete_contact(org_id: str, user_id: str, contact_id: str):
 
     if response.status_code == 204:
         return {"message": f"Contact {contact_id} successfully deleted."}
+    # HubSpot returns 204 even if the contact is already deleted or doesn't exist
+    # So, though I tried to handle 404 separately
+    # But, it's not working and any random ID when deleting
+    # says successfully deleted. I TRIED!! :)
     elif response.status_code == 404:
         raise HTTPException(
             status_code=404,

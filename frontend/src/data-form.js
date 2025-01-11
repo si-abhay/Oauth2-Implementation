@@ -1,6 +1,6 @@
 // data-form.js
 import { useState } from "react";
-import { Box, TextField, Button } from "@mui/material";
+import { Box, Button, Paper } from "@mui/material";
 import axios from "axios";
 
 const endpointMapping = {
@@ -37,35 +37,51 @@ export const DataForm = ({ integrationType, credentials }) => {
       }
     };
 
-    return (
-        <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            flexDirection="column"
-            width="100%"
+  return (
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      flexDirection="column"
+      width="100%"
+    >
+      <Box display="flex" flexDirection="column" width="100%">
+        
+        {/* A Paper to display the loaded data in a big area */}
+        <Paper
+          variant="outlined"
+          sx={{
+            mt: 2,
+            p: 2,
+            width: '600px',       // Make the data area wider
+            minHeight: '200px',   
+            maxHeight: '400px',   // Limit how tall it can grow
+            overflow: 'auto',     // Scroll if content is too large
+          }}
         >
-            <Box display="flex" flexDirection="column" width="100%">
-                <TextField
-                    label="Loaded Data"
-                    value={loadedData ? JSON.stringify(loadedData, null, 2) : ""}
-                    sx={{ mt: 2 }}
-                    InputLabelProps={{ shrink: true }}
-                    disabled
-                    multiline
-                    rows={10}
-                />
-                <Button onClick={handleLoad} sx={{ mt: 2 }} variant="contained">
-                    Load Data
-                </Button>
-                <Button
-                    onClick={() => setLoadedData(null)}
-                    sx={{ mt: 1 }}
-                    variant="contained"
-                >
-                    Clear Data
-                </Button>
-            </Box>
-        </Box>
-    );
+          <Box component="pre" fontFamily="monospace" margin={0}>
+            {loadedData 
+              ? JSON.stringify(loadedData, null, 2)
+              : 'No data yet.'
+            }
+          </Box>
+        </Paper>
+
+      </Box>
+      <Button 
+        onClick={handleLoad}
+        sx={{ mt: 2 }}
+        variant="contained"
+      >
+        Load Data
+      </Button>
+      <Button
+        onClick={() => setLoadedData(null)}
+        sx={{ mt: 1 }}
+        variant="contained"
+      >
+        Clear Data
+      </Button>
+    </Box>
+  );
 };

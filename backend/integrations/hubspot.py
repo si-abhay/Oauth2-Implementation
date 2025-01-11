@@ -293,6 +293,11 @@ async def get_contact(org_id: str, user_id: str, contact_id: str) -> dict:
     
     if response.status_code == 200:
         return response.json()
+    elif response.status_code == 404:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Contact {contact_id} does not exist or is already deleted."
+        )
     else:
         raise HTTPException(
             status_code=response.status_code,

@@ -1,0 +1,4 @@
+fastapi>=0.95,<1.0
+redis>=5.0,<6.0
+kombu>=5.0,<6.0
+uvicorn[standard]>=0.22

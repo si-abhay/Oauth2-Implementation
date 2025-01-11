@@ -63,7 +63,11 @@ export const HubspotIntegration = ({ user, org, integrationParams, setIntegratio
                 setIsConnected(true);
                 setIntegrationParams(prev => ({
                     ...prev,
-                    credentials: creds,
+                    credentials: {
+                        ...creds,
+                        user_id: user,          // “user_id or org_id missing!” on clicking Load Data button
+                        org_id: org             // Took a lot of time to figure out this!! :((
+                    },
                     type: "Hubspot"
                 }));
             }

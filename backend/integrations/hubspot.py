@@ -4,6 +4,8 @@ import secrets
 from fastapi import Request, HTTPException
 from fastapi.responses import HTMLResponse
 import httpx
+import time
+from typing import Union
 
 from integrations.integration_item import IntegrationItem
 from redis_client import add_key_value_redis, get_value_redis, delete_key_redis
@@ -45,8 +47,11 @@ async def authorize_hubspot(user_id: str, org_id: str) -> str:
 
 async def oauth2callback_hubspot(request: Request):
     """
-    Handle the OAuth2 callback from HubSpot,
-    exchange the 'code' for access tokens, store them in Redis.
+    Handle the OAuth2 callback from HubSpot:
+        - validate 'state'
+        - exchange 'code' for access_token + refresh_token
+        - store tokens with expiration info in Redis
+        - close the popup
     """
     if "error" in request.query_params:
         error_detail = request.query_params.get("error_description", "HubSpot OAuth error")
@@ -63,13 +68,16 @@ async def oauth2callback_hubspot(request: Request):
         raise HTTPException(status_code=400, detail="Invalid or expired state token.")
 
     # Cleaning up the state key (it's single-use), why not use a TTL? :(
+    # Could have implemented by passing parameter 'expire' in 'add_key_value_redis'
+    # But, I wanted to use 'delete_key_redis' as well! :)
     await delete_key_redis(f"hubspot_state:{state}")
 
     state_data = json.loads(saved_state)
     user_id = state_data["user_id"]
     org_id = state_data["org_id"]
 
-    data = {
+    # Exchange code for tokens
+    token_data = {
         "grant_type": "authorization_code",
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
@@ -77,47 +85,126 @@ async def oauth2callback_hubspot(request: Request):
         "code": code,
     }
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            TOKEN_URL,
-            data=data,
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
-        )
+    tokens = await hubspot_exchange_for_tokens(token_data)
+    if not tokens:
+        raise HTTPException(status_code=400, detail="Failed to exchange code for access token.")
 
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=400,
-            detail="Failed to exchange code for access token."
-        )
-
-    tokens = response.json()
-
-    # Store tokens in Redis
-    # For real usage, consider also storing refresh_token and expiration metadata
-    await add_key_value_redis(
-        f"hubspot_credentials:{org_id}:{user_id}",
-        json.dumps(tokens),
-        expire=3600
-    )
+    # Save tokens in Redis
+    await store_tokens_in_redis(org_id, user_id, tokens)
 
     # Return a script that closes the popup
-    return HTMLResponse(
-        content="<script>window.close()</script>",
-        status_code=200
-    )
+    return HTMLResponse("<script>window.close()</script>", status_code=200)
 
 async def get_hubspot_credentials(user_id: str, org_id: str) -> dict:
     """
-    Retrieve HubSpot credentials from Redis for the given user/org.
+    Fetch stored tokens from Redis if they exist.
+    Raise HTTPException(400) if missing.
     """
     key = f"hubspot_credentials:{org_id}:{user_id}"
-    credentials = await get_value_redis(key)
-    if not credentials:
+    stored = await get_value_redis(key)
+    if not stored:
         raise HTTPException(
             status_code=400,
             detail=f"No HubSpot credentials found for org={org_id}, user={user_id}."
         )
-    return json.loads(credentials)
+    return json.loads(stored)
+
+async def get_valid_hubspot_access_token(org_id: str, user_id: str) -> str:
+    """
+    Ensure we have a valid (non-expired) access token for the given org/user.
+    If expired or near expiry then refresh it.
+    Returns the valid access token.
+    """
+    # Loading stored tokens
+    credentials = await get_hubspot_credentials(user_id, org_id)
+    access_token = credentials.get("access_token")
+    refresh_token = credentials.get("refresh_token")
+
+    # We also stored custom 'expires_at' time in func 'store_tokens_in_redis'
+    # if you remember! :)
+    expires_at = credentials.get("expires_at_utc")
+    if not expires_at:
+        # If we have no expires_at then a fallback to just returning the token.
+        return await refresh_access_token(org_id, user_id, refresh_token)
+
+    now_utc = int(time.time())
+    # If the token expires in next ~30 seconds, refresh it!
+    # Isn't this cool? We can refresh the token before it expires! :)
+    if now_utc > (expires_at - 30):
+        return await refresh_access_token(org_id, user_id, refresh_token)
+
+    # Otherwise, it's still good
+    return access_token
+
+async def refresh_access_token(org_id: str, user_id: str, refresh_token: str) -> str:
+    """
+    Use the stored refresh_token to get a new access_token from HubSpot.
+    Store the new tokens in Redis. Return the new access_token.
+    """
+    print(f"[REFRESH] Attempting to refresh token for org={org_id}, user={user_id}")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=400,
+            detail="No refresh_token available to refresh access token."
+        )
+
+    token_data = {
+        "grant_type": "refresh_token",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "refresh_token": refresh_token,
+    }
+
+    new_tokens = await hubspot_exchange_for_tokens(token_data)
+    if not new_tokens:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to refresh HubSpot access token."
+        )
+
+    # Store updated tokens
+    await store_tokens_in_redis(org_id, user_id, new_tokens)
+
+    return new_tokens["access_token"]
+
+async def hubspot_exchange_for_tokens(token_data: dict) -> dict:
+    """
+    Helper function to call HubSpotfor both 'authorization_code' and 'refresh_token' flows.
+    Returns the JSON token payload, or None if error.
+    """
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            TOKEN_URL,
+            data=token_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+        if resp.status_code != 200:
+            return None
+        return resp.json()
+
+async def store_tokens_in_redis(org_id: str, user_id: str, tokens: dict):
+    """
+    Store 'access_token', 'refresh_token', 'expires_in' from HubSpot
+    in Redis and a custom 'expires_at_utc' for easy checking.
+    """
+    expires_in = tokens.get("expires_in", 600)  # fallback 10 mins if missing
+    expires_in = 60  # Forcing a super short TTL for testing the automatic silent refresh in BG
+
+    now_utc = int(time.time())
+    expires_at_utc = now_utc + expires_in
+
+    new_payload = {
+        "access_token": tokens["access_token"],
+        "refresh_token": tokens.get("refresh_token"),
+        "expires_in": expires_in,
+        "expires_at_utc": expires_at_utc,
+        "token_type": tokens.get("token_type", "bearer"),
+        "scope": tokens.get("scope"),
+    }
+
+    key = f"hubspot_credentials:{org_id}:{user_id}"
+    await add_key_value_redis(key, json.dumps(new_payload), expire=expires_in + 120)
+    # We set Redis key to expire a bit after the token actually expires
 
 async def create_integration_item_metadata_object(
     response_json: dict,
@@ -141,14 +228,31 @@ async def create_integration_item_metadata_object(
         last_modified_time=response_json.get("updatedAt"),
     )
 
-async def get_items_hubspot(credentials: dict) -> list:
+async def get_items_hubspot(credentials_or_str: Union[dict, str]) -> list:
     """
     Fetch contacts from HubSpot using the provided credentials.
     Return a list of IntegrationItem objects.
     """
-    access_token = credentials["access_token"]
-    headers = {"Authorization": f"Bearer {access_token}"}
 
+    if isinstance(credentials_or_str, str):
+        credentials = json.loads(credentials_or_str)
+    else:
+        credentials = credentials_or_str
+
+    user_id = credentials.get("user_id")
+    org_id = credentials.get("org_id")
+
+    if not user_id or not org_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing 'user_id' or 'org_id' to fetch HubSpot data."
+        )
+
+    # First ensure we have valid (non-expired) token
+    access_token = await get_valid_hubspot_access_token(org_id, user_id)
+
+    # Then fetch contacts from HubSpot
+    headers = {"Authorization": f"Bearer {access_token}"}
     async with httpx.AsyncClient() as client:
         response = await client.get(
             "https://api.hubapi.com/crm/v3/objects/contacts",
@@ -158,7 +262,7 @@ async def get_items_hubspot(credentials: dict) -> list:
     if response.status_code != 200:
         raise HTTPException(
             status_code=400,
-            detail="Failed to fetch HubSpot contacts."
+            detail="Failed to fetch HubSpot contacts. Maybe invalid/expired token."     # Maybe!! Hmmmm :(
         )
 
     items = response.json().get("results", [])

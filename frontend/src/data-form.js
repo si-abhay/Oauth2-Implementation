@@ -12,27 +12,29 @@ const endpointMapping = {
 export const DataForm = ({ integrationType, credentials }) => {
     const [loadedData, setLoadedData] = useState(null);
     const endpoint = endpointMapping[integrationType];
-
+  
     const handleLoad = async () => {
-        if (!credentials) {
-            alert("No credentials available. Please connect first.");
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            // We pass the entire credentials object as JSON, JSON is just the best! 🚀
-            formData.append("credentials", JSON.stringify(credentials));
-
-            const response = await axios.post(
-                `http://localhost:8000/integrations/${endpoint}/load`,
-                formData
-            );
-            setLoadedData(response.data);
-        } catch (e) {
-            console.error(e);
-            alert(e?.response?.data?.detail || e.message);
-        }
+      if (!credentials?.user_id || !credentials?.org_id) {
+        alert('user_id or org_id missing!');
+        return;
+      }
+      try {
+        const formData = new FormData();
+        // Only passing the user_id, org_id, so the backend can handle refresh
+        const minimalPayload = {
+          user_id: credentials.user_id,
+          org_id: credentials.org_id,
+        };
+        formData.append("credentials", JSON.stringify(minimalPayload));
+  
+        const response = await axios.post(
+          `http://localhost:8000/integrations/${endpoint}/load`,
+          formData
+        );
+        setLoadedData(response.data);
+      } catch (err) {
+        alert(err?.response?.data?.detail || err.message);
+      }
     };
 
     return (

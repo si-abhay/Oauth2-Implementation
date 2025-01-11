@@ -117,16 +117,15 @@ async def get_hubspot_credentials_integration(
     org_id: str = Form(...)
 ):
     """
-    Returns the credentials from Redis, if they exist,
-    or raises an error if they don't.
+    Returns the credentials from Redis, if they exist, or raises an error.
+    Also contains refresh_token, access_token etc.
     """
     return await get_hubspot_credentials(user_id, org_id)
 
 @app.post("/integrations/hubspot/load")
 async def load_hubspot_data_integration(credentials: str = Form(...)):
     """
-    Called by the frontend to load HubSpot data,
-    passing raw JSON credentials in the 'credentials' form field.
+    Expects a JSON string with at least: "user_id" and "org_id".
+    Then calls get_items_hubspot, which auto-refreshes if needed.
     """
-    creds = json.loads(credentials)  # parse the JSON string
-    return await get_items_hubspot(creds)
+    return await get_items_hubspot(credentials)

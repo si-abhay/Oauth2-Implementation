@@ -3,15 +3,7 @@
 
 #                       OAuth2 Integration (using HubSpot)
 
-A FastAPI + React demo that integrates with third-party service HubSpot. It demonstrates OAuth flows, storing credentials in Redis, and performing basic data operations like listing items, CRUD actions.
-
-### OVERVIEW
-This project's implementation shows how to:
-1. Authorize a user via OAuth2 to HubSpot (Notion, and Airtable also).
-2. Store OAuth tokens (including refresh tokens) in Redis.
-3. Automatically refresh expired access tokens to avoid re-prompting users.
-4. Load data from each service.
-5. Perform CRUD actions on HubSpot contacts (create, retrieve, update, delete).
+A FastAPI + React demo that integrates with third-party service HubSpot. It demonstrates OAuth2.0 **Authorization Code Flow** (Generally the most secure approach), storing credentials in Redis, and performing basic data operations like listing items, CRUD actions.
 
 ## ⚡ Setup & Installation
 
@@ -49,6 +41,29 @@ This starts your API on http://localhost:8000.
     ```
 
 This starts your React app on http://localhost:3000.
+
+
+### OVERVIEW
+
+1. Authorize a user via OAuth2 to HubSpot (Notion, and Airtable also).
+2. Store OAuth tokens (including refresh tokens) in Redis.
+3. Automatically refresh expired access tokens to avoid re-prompting users.
+4. Load data from each service.
+5. Perform CRUD actions on HubSpot contacts (create, retrieve, update, delete).
+
+### OAuth Flow
+
+Implemented the **Authorization Code Flow**, considered the most secure among OAuth 2.0 methods:
+
+1. **Initiate** – The user clicks "Connect," opening a HubSpot (or Notion/Airtable) authorization screen in a pop-up.
+2. **Consent** – The service prompts the user to grant permissions to our application.
+3. **Redirect** – After approval, the user is sent back with a one-time **authorization code**.
+4. **Exchange** – Our FastAPI backend exchanges that code for an **access token** and **refresh token**, securely storing them in **Redis**.
+5. **Reuse & Refresh** – With tokens in Redis, the app can **automatically refresh** them when they expire, eliminating repeated prompts.  
+6. **Access & CRUD** – Finally, the app uses valid tokens to perform **CRUD** operations (e.g., fetching contacts, creating records) in HubSpot or other integrated services.
+###
+This flow ensures minimal user hassle, more security (no credentials stored on the frontend), and smooth data retrieval/updates once authorization is granted.
+
 
 ### Features
 

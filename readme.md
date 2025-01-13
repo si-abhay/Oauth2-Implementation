@@ -63,7 +63,7 @@ Ensure you have a Redis server running locally on default port 6379, or update t
    This starts your React app on [http://localhost:3000](http://localhost:3000).
 
 
-### OVERVIEW
+### 🎯 Overview
 
 1. Authorize a user via OAuth2 to HubSpot (and similarly Notion, Airtable).
 2. Store OAuth tokens (including refresh tokens) in Redis.
@@ -79,8 +79,9 @@ Implemented the **Authorization Code Flow**, considered the most secure among OA
 2. **Consent** – The service prompts the user to grant permissions to our application.
 3. **Redirect** – After approval, the user is sent back with a one-time **authorization code**.
 4. **Exchange** – Our FastAPI backend exchanges that code for an **access token** and **refresh token**, securely storing them in **Redis**.
-5. **Reuse & Refresh** – With tokens in Redis, the app can **automatically refresh** them when they expire, eliminating repeated prompts.  
-6. **Access & CRUD** – Finally, the app uses valid tokens to perform **CRUD** operations (e.g., fetching contacts, creating records) in HubSpot or other integrated services.
+5. **State Validation** – Used a random `state` token (stored in Redis with a short TTL) to prevent **CSRF Attacks**. If the returned state doesn’t match what was initially generated or has expired, the request gets rejected.
+6. **Reuse & Refresh** – With tokens in Redis, the app can **automatically refresh** them when they are about to expire, eliminating repeated prompts.  
+7. **Access & CRUD** – Finally, the app uses valid tokens to perform **CRUD** operations (e.g., fetching contacts, creating records) in HubSpot or other integrated services.
 ###
 This flow ensures minimal user hassle, more security (no credentials stored on the frontend), and smooth data retrieval/updates once authorization is granted.
 
@@ -90,6 +91,7 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
 - **FastAPI** backend:
   - Endpoints for OAuth **authorization**, **callback**, and retrieving **credentials**.
   - **Redis** for storing access/refresh tokens securely.
+  - **Short-lived** `state` tokens to protect from CSRF, with auto-expiration.
   - Automatic token **refresh** logic, so users don’t have to re-authenticate frequently.
   - Integration with **HubSpot**, **Notion**, **Airtable** for loading items and performing CRUD.
   - **Automatic re-login**: If tokens are missing or expired, the frontend detects it and redirects the user to re-authenticate.

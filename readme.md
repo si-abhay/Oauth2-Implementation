@@ -112,6 +112,7 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
   - **Volume mounting** for real-time code changes
   - **Environment variables** configured for service communication
   - **Single command** to start all services (`docker-compose up --build`)
+  - To rebuild containers (remove and build from scratch) `docker-compose down`
   - **Isolated environments** ensuring consistent development experience
 
 ## ⚡ Technologies

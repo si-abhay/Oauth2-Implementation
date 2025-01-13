@@ -98,7 +98,7 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
 
 
 ### ONE UNHEALTHY THING
-In DELETE their is this very weird behaviour shown by Hubspot. Even if the provided ID object does not exist, instead of returning 404 status it returns 204!!
+In DELETE there is this very weird behaviour shown by Hubspot. Even if the provided ID object does not exist, instead of returning 404 status it returns 204!!
 
 Ofc it's
 [![forthebadge](https://forthebadge.com/images/badges/not-a-bug-a-feature.svg)](https://forthebadge.com)

@@ -1,6 +1,7 @@
 import os
 import json
 import secrets
+from dotenv import load_dotenv
 from fastapi import Request, HTTPException
 from fastapi.responses import HTMLResponse
 import httpx
@@ -10,13 +11,13 @@ from typing import Optional, Union
 from integrations.integration_item import IntegrationItem
 from redis_client import add_key_value_redis, get_value_redis, delete_key_redis
 
-# Best to read these from environment variables, A good practice which I have learnt! :)
-CLIENT_ID = os.getenv("HUBSPOT_CLIENT_ID", "33895f84-1a6f-4eeb-99b6-9524cd678494")
-CLIENT_SECRET = os.getenv("HUBSPOT_CLIENT_SECRET", "99f06fcb-ff8c-4fea-87c2-2c855a7e11d6")
-REDIRECT_URI = os.getenv(
-    "HUBSPOT_REDIRECT_URI",
-    "http://localhost:8000/integrations/hubspot/oauth2callback"
-)
+# Load the .env file
+load_dotenv()
+
+# Best to read secrets from env files, A good practice which I have learnt! :)
+CLIENT_ID = os.getenv("HUBSPOT_CLIENT_ID")
+CLIENT_SECRET = os.getenv("HUBSPOT_CLIENT_SECRET")
+REDIRECT_URI = os.getenv('HUBSPOT_REDIRECT_URI', 'http://localhost:8000/integrations/hubspot/oauth2callback')
 
 AUTHORIZATION_URL = "https://app.hubspot.com/oauth/authorize"
 TOKEN_URL = "https://api.hubapi.com/oauth/v1/token"

@@ -7,6 +7,26 @@ A FastAPI + React demo that integrates with third-party service HubSpot. It demo
 
 ## ⚡ Setup & Installation
 
+### Option 1: Using Docker (You Will Like It!!)
+
+1. Clone this repository:
+   ```bash
+   git clone git@github.com:si-abhay/Oauth2-Implementation.git
+   cd Oauth2-Implementation
+   ```
+
+2. Start the services using Docker Compose:
+   ```bash
+   docker-compose up --build
+   ```
+
+   This will start:
+   - Frontend on http://localhost:3000
+   - Backend on http://localhost:8000
+   - Redis on port 6379
+
+### Option 2: Manual Setup
+
 1. Clone this repository:
     ```bash
     git clone git@github.com:si-abhay/Oauth2-Implementation.git
@@ -83,8 +103,16 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
 
 - Clean, modern **Material UI** layout:
   - **Two-column** view (DataForm on the left, ContactForm on the right) for HubSpot.
-  - Scrollable panels for JSON data and results.
   - Clear buttons to reset fields, making the user experience straightforward.
+
+- **Docker** containerization:
+  - **Multi-container** setup with Docker Compose
+  - Separate containers for **Frontend**, **Backend**, and **Redis**
+  - **Hot-reload** enabled for both frontend and backend development
+  - **Volume mounting** for real-time code changes
+  - **Environment variables** configured for service communication
+  - **Single command** to start all services (`docker-compose up --build`)
+  - **Isolated environments** ensuring consistent development experience
 
 ## ⚡ Technologies
 
@@ -95,6 +123,7 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
 ![OAuth 2.0](https://img.shields.io/badge/-OAuth2.0-A9A9A9?style=flat-square&logo=OAuth)
 ![Git](https://img.shields.io/badge/-Git-black?style=flat-square&logo=git)
 ![GitHub](https://img.shields.io/badge/-GitHub-181717?style=flat-square&logo=github)
+![Docker](https://img.shields.io/badge/-Docker-black?style=flat-square&logo=Docker)
 ![HTML5](https://img.shields.io/badge/-HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/-CSS3-1572B6?style=flat-square&logo=css3)
 

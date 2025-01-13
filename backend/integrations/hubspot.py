@@ -366,8 +366,27 @@ async def update_contact(org_id: str, user_id: str, contact_id: str, properties:
 
 async def delete_contact(org_id: str, user_id: str, contact_id: str):
     """
-    Delete a contact by ID.
+    Delete a contact by ID, but first verify that it actually exists.
     """
+    # HubSpot returns 204 even if the contact is already deleted or doesn't exist
+    # So, though I tried to handle 404 separately
+    # But, it's not working and any random ID when deleting
+    # says successfully deleted. I TRIED!! :)
+
+    # A cleaver way to handle Hubspot's 204 response for DELETE
+    # Checking if contact exists by GET operation
+    try:
+        contact = await get_contact(org_id, user_id, contact_id)
+    except HTTPException as exc:
+        # If get_contact raises 404, re-raise as does not exist
+        if exc.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Contact {contact_id} does not exist, cannot delete."
+            )
+        else:
+            # Something happened :((
+            raise
     access_token = await get_valid_hubspot_access_token(org_id, user_id)
     url = f"{BASE_URL}/{contact_id}"
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -377,15 +396,6 @@ async def delete_contact(org_id: str, user_id: str, contact_id: str):
 
     if response.status_code == 204:
         return {"message": f"Contact {contact_id} successfully deleted."}
-    # HubSpot returns 204 even if the contact is already deleted or doesn't exist
-    # So, though I tried to handle 404 separately
-    # But, it's not working and any random ID when deleting
-    # says successfully deleted. I TRIED!! :)
-    elif response.status_code == 404:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Contact {contact_id} does not exist or is already deleted."
-        )
     else:
         raise HTTPException(
             status_code=response.status_code,

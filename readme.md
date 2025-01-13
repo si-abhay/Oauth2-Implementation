@@ -14,7 +14,7 @@ A FastAPI + React demo that integrates with third-party service HubSpot. It demo
     ```
 
 2. Install Python dependencies (in a virtual environment if you wish):
-    ```python
+    ```bash
     pip install -r requirements.txt
     ```
 
@@ -23,15 +23,15 @@ A FastAPI + React demo that integrates with third-party service HubSpot. It demo
     redis-server
     ```
 
-Enure you have a Redis server running locally on default port 6379, or update the settings in redis_client.py to match your environment.
+Ensure you have a Redis server running locally on default port 6379, or update the settings in `redis_client.py` to match your environment.
 
-4. Run the FastAPI server(Backend):
+4. Run the FastAPI server (Backend):
     ```bash
     cd backend
     uvicorn main:app --reload
     ```
 
-This starts your API on http://localhost:8000.
+   This starts your API on [http://localhost:8000](http://localhost:8000).
 
 5. Install & run the React frontend:
     ```bash
@@ -40,12 +40,12 @@ This starts your API on http://localhost:8000.
     npm run start
     ```
 
-This starts your React app on http://localhost:3000.
+   This starts your React app on [http://localhost:3000](http://localhost:3000).
 
 
 ### OVERVIEW
 
-1. Authorize a user via OAuth2 to HubSpot (Notion, and Airtable also).
+1. Authorize a user via OAuth2 to HubSpot (and similarly Notion, Airtable).
 2. Store OAuth tokens (including refresh tokens) in Redis.
 3. Automatically refresh expired access tokens to avoid re-prompting users.
 4. Load data from each service.
@@ -72,12 +72,14 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
   - **Redis** for storing access/refresh tokens securely.
   - Automatic token **refresh** logic, so users don’t have to re-authenticate frequently.
   - Integration with **HubSpot**, **Notion**, **Airtable** for loading items and performing CRUD.
+  - **Automatic re-login**: If tokens are missing or expired, the frontend detects it and redirects the user to re-authenticate.
 
 - **React** frontend:
   - Simple forms for **User**, **Organization**, and **Integration Type**.
   - **Pop-up** OAuth flow (e.g., HubSpot) with post-auth retrieval of tokens.
   - **Load Data** features to fetch and display items from each service.
   - **CRUD** operations for HubSpot contacts (create, retrieve, update, delete).
+  - **Auto-redirect** upon “No HubSpot credentials found”: If Redis no longer has stored tokens, the user is prompted and immediately taken back to the connect flow.
 
 - Clean, modern **Material UI** layout:
   - **Two-column** view (DataForm on the left, ContactForm on the right) for HubSpot.
@@ -97,12 +99,12 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
 ![CSS3](https://img.shields.io/badge/-CSS3-1572B6?style=flat-square&logo=css3)
 
 
-### ONE UNHEALTHY THING
-In DELETE there is this very weird behaviour shown by Hubspot. Even if the provided ID object does not exist, instead of returning 404 status it returns 204!!
+### ONE WEIRD THING
+In **DELETE**, there is a **weird** behavior shown by HubSpot: even if the provided contact ID does **not exist**, it returns a **204** (no content) instead of returning **404**! Thus, the UI sees “successfully deleted” even for random IDs. Workaround which I implemented is to **GET** the contact first if you truly want to validate its existence before deleting.
 
-Ofc it's
+Of course:
 [![forthebadge](https://forthebadge.com/images/badges/not-a-bug-a-feature.svg)](https://forthebadge.com)
 
-[My LinkedIn](https://www.linkedin.com/in/abhay3104/) 
+[My LinkedIn](https://www.linkedin.com/in/abhay3104/)
 
 [![coffee](https://forthebadge.com/images/badges/powered-by-coders-sweat.svg)](https://forthebadge.com)

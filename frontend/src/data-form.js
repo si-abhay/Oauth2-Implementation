@@ -33,7 +33,16 @@ export const DataForm = ({ integrationType, credentials }) => {
         );
         setLoadedData(response.data);
       } catch (err) {
-        alert(err?.response?.data?.detail || err.message);
+        // Reloading the page so user can connect again as tokens were cleared from redis
+        // A simple tweak I thought to handle token expiry :)
+        const detail = err?.response?.data?.detail || err.message;
+        if (detail.includes("No HubSpot credentials found for org=")) {
+          alert(detail);
+          
+          window.location.reload();
+        } else {
+          alert(detail);
+        }
       }
     };
 

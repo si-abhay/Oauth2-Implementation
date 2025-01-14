@@ -134,7 +134,8 @@ This flow ensures minimal user hassle, more security (no credentials stored on t
 ### ONE WEIRD THING
 In **DELETE**, there is a **weird** behavior shown by HubSpot: even if the provided contact ID does **not exist**, it returns a **204** (no content) instead of returning **404**! Thus, the UI sees “successfully deleted” even for random IDs. Workaround which I implemented is to **GET** the contact first if you truly want to validate its existence before deleting.
 
-Of course:
+Of course:  
+
 [![forthebadge](https://forthebadge.com/images/badges/not-a-bug-a-feature.svg)](https://forthebadge.com)
 
 [My LinkedIn](https://www.linkedin.com/in/abhay3104/)
